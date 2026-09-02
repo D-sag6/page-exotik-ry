@@ -14,6 +14,9 @@ const ORDERS_FILE = path.join(__dirname, 'orders.json');
 app.use(express.static(path.join(__dirname, 'public')));
 app.use(express.json());
 
+// Evitar error 404 del favicon
+app.get('/favicon.ico', (req, res) => res.status(204).end());
+
 // Leer comandas desde archivo JSON
 function getOrdersFromFile() {
     try {
