@@ -1,3 +1,5 @@
+// Reemplaza con la URL real de tu web service en Render
+const socket = io('https://tu-app-en-render.onrender.com');
 const socket = io();
 
 let menuData = [];
