@@ -1,3 +1,7 @@
+const socket = io('https://page-exotik-ry.onrender.com');
+
+let menuData = [];
+let cart = [];
 const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
