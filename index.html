@@ -3,157 +3,64 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>La Exotik RY - Sistema POS & Comandas</title>
-    <link rel="stylesheet" href="styles.css">
+    <title>La Exotik RY - Menú & Gestión</title>
+    <link rel="stylesheet" href="style.css">
     <script src="/socket.io/socket.io.js"></script>
-<script src="script.js"></script>
 </head>
 <body>
-
-    <!-- ENCABEZADO Y NAVEGACIÓN -->
-    <header>
-        <div class="brand-title">LA EXOTIK RY</div>
-        <div class="user-nav" id="userNav" style="display: none;">
-            <span class="role-badge" id="roleBadge">Mesero</span>
-            <button class="btn-logout" onclick="logout()">Cambiar Rol</button>
-        </div>
+    <header class="app-header">
+        <h1 class="logo-title">La Exotik RY</h1>
+        <nav class="role-selector">
+            <button class="role-btn active" onclick="switchRole('client')">Menú / Cliente</button>
+            <button class="role-btn" onclick="switchRole('kitchen')">Cocina</button>
+            <button class="role-btn" onclick="switchRole('manager')">Administración</button>
+        </nav>
     </header>
 
-    <main>
-        <!-- VISTA: SELECCIÓN DE ROL (LOGIN) -->
-        <section id="loginView" class="view-section active">
-            <div class="login-container">
-                <h2>Selecciona tu Rol</h2>
-                <p class="login-subtitle">Acceso al sistema POS & Comandas</p>
-                <div class="role-selector">
-                    <button class="btn-role btn-waiter" onclick="login('mesero')">
-                        🍽️ Entrada Mesero
-                    </button>
-                    <button class="btn-role btn-kitchen" onclick="login('cocina')">
-                        👨‍🍳 Pantalla Cocina
-                    </button>
-                    <button class="btn-role btn-manager" onclick="login('gerente')">
-                        📊 Panel Gerente
-                    </button>
+    <main class="container">
+        <!-- VISTA CLIENTE -->
+        <section id="clientView" class="view-section active">
+            <h2 class="section-title">Nuestro Menú</h2>
+            <div id="menuContainer" class="menu-grid"></div>
+
+            <div class="cart-drawer">
+                <h3>Tu Pedido</h3>
+                <div id="cartItems"></div>
+                <div class="cart-summary">
+                    <p>Total: <strong id="cartTotal">$0</strong></p>
+                    <button class="btn-primary" onclick="submitOrder()">Enviar Pedido</button>
                 </div>
             </div>
         </section>
 
-        <!-- VISTA: MESERO (POS Y MENÚ INTERACTIVO) -->
-        <section id="waiterView" class="view-section">
-            <div class="pos-grid">
-                <!-- LISTADO DE PRODUCTOS DEL MENÚ -->
-                <div id="menuContainer"></div>
-
-                <!-- PANEL DE PEDIDO / CARRITO -->
-                <div class="order-panel">
-                    <div class="order-header">
-                        <span>Pedido Actual</span>
-                        <button onclick="clearCart()" class="btn-clear">Limpiar</button>
-                    </div>
-                    <input type="text" id="tableName" class="table-input" placeholder="Mesa / Nombre de Cliente (Ej. Mesa 4)">
-                    
-                    <div class="cart-list" id="cartList">
-                        <p class="cart-empty">No hay productos seleccionados.</p>
-                    </div>
-
-                    <div class="cart-total">
-                        <span>Total:</span>
-                        <span id="cartTotal">$0</span>
-                    </div>
-
-                    <button class="btn-send-order" onclick="sendOrder()">🚀 ENVIAR A COCINA</button>
-                </div>
-            </div>
+        <!-- VISTA COCINA -->
+        <section id="kitchenView" class="view-section" style="display: none;">
+            <h2 class="section-title">Comandas en Cocina</h2>
+            <div id="kitchenOrders" class="orders-grid"></div>
         </section>
 
-        <!-- VISTA: COCINA (COMANDAS EN TIEMPO REAL) -->
-        <section id="kitchenView" class="view-section">
-            <h2 class="section-title">Comandas en Tiempo Real</h2>
-            <div class="kitchen-grid" id="kitchenOrdersContainer"></div>
-        </section>
-
-        <!-- VISTA: GERENTE (PANEL DE CONTROL, CAJA Y MENÚ) -->
-        <section id="managerView" class="view-section">
-            <h2 class="section-title">Panel Administrador</h2>
-
-            <!-- ESTADO Y CONTROL DE CAJA -->
-            <div class="cash-control-panel">
-                <div>
-                    <h3 style="margin-bottom: 5px;">Estado de Caja: <span id="cashRegisterStatus" style="color: var(--accent-green);">ABIERTA</span></h3>
-                    <p style="color: #666; font-size: 0.9rem;" id="cashRegisterInfo">Jornada activa actualmente.</p>
-                </div>
-                <div style="display: flex; gap: 10px;">
-                    <button id="btnOpenCash" onclick="openCashRegister()" class="btn-role btn-open-cash" style="display: none;">🔓 Abrir Caja</button>
-                    <button id="btnCloseCash" onclick="closeCashRegister()" class="btn-role btn-close-cash">🔒 Cerrar Caja</button>
-                </div>
-            </div>
-
-            <!-- TARJETAS DE MÉTRICAS -->
-            <div class="manager-stats">
-                <div class="stat-card">
-                    <h4>Ventas de Hoy (Caja Actual)</h4>
-                    <div class="value" id="statSales">$0</div>
-                </div>
-                <div class="stat-card">
-                    <h4>Comandas Procesadas</h4>
-                    <div class="value" id="statOrders">0</div>
-                </div>
-                <div class="stat-card">
-                    <h4>Ventas Acumuladas</h4>
-                    <div class="value value-text" id="statMonthSales">$0</div>
-                </div>
-            </div>
-
-            <!-- ADMINISTRADOR DE PRODUCTOS (EDITAR PRECIOS Y NOMBRES) -->
+        <!-- VISTA ADMINISTRACIÓN -->
+        <section id="managerView" class="view-section" style="display: none;">
+            <h2 class="section-title">Panel de Administración</h2>
+            
             <div class="manager-card-box">
-                <h3 class="subsection-title" style="color: var(--primary-pink); margin-bottom: 15px;">Gestión de Menú (Modificar Nombres y Precios)</h3>
+                <h3 class="subsection-title" style="color: var(--primary-pink, #ff4081); margin-bottom: 15px;">Gestión de Menú (Modificar Nombres y Precios)</h3>
                 
-                <div class="product-form-grid">
-                    <input type="hidden" id="editProductId">
-                    <input type="text" id="editProductName" class="table-input" style="margin:0;" placeholder="Nombre del Producto">
-                    <input type="number" id="editProductPrice" class="table-input" style="margin:0;" placeholder="Precio (COP)">
-                    <select id="editProductCategory" class="table-input" style="margin:0;">
-                        <option value="Hamburguesas">Hamburguesas</option>
-                        <option value="Salchipapas">Salchipapas</option>
-                        <option value="Combos">Combos</option>
-                        <option value="Perras">Perras</option>
-                        <option value="Alitas">Alitas</option>
-                        <option value="Bebidas & Adiciones">Bebidas & Adiciones</option>
-                    </select>
-                    <input type="text" id="editProductDesc" class="table-input" style="margin:0;" placeholder="Descripción corta">
-                    <button onclick="saveProduct()" class="btn-send-order" style="padding:10px; font-size:0.95rem;" id="btnSaveProduct">➕ Guardar / Actualizar</button>
-                </div>
-
-                <div style="max-height: 300px; overflow-y: auto;">
+                <div style="max-height: 500px; overflow-y: auto;">
                     <table class="recent-orders-table">
                         <thead>
                             <tr>
                                 <th>Categoría</th>
                                 <th>Nombre</th>
                                 <th>Precio</th>
-                                <th>Acción</th>
+                                <th>Descripción</th>
+                                <th>Acciones</th>
                             </tr>
                         </thead>
                         <tbody id="managerProductsTable"></tbody>
                     </table>
                 </div>
             </div>
-
-            <!-- HISTORIAL DE COMANDAS -->
-            <h3 class="subsection-title">Historial Reciente de Comandas</h3>
-            <table class="recent-orders-table">
-                <thead>
-                    <tr>
-                        <th>ID</th>
-                        <th>Mesa / Cliente</th>
-                        <th>Hora</th>
-                        <th>Estado</th>
-                        <th>Total</th>
-                    </tr>
-                </thead>
-                <tbody id="managerOrdersTable"></tbody>
-            </table>
         </section>
     </main>
 

@@ -6,79 +6,66 @@ const path = require('path');
 
 const app = express();
 const server = http.createServer(app);
-const io = new Server(server, {
-    cors: {
-        origin: "*",
-        methods: ["GET", "POST"]
-    }
-});
+const io = new Server(server);
 
 const PORT = process.env.PORT || 3000;
-const DATA_FILE = path.join(__dirname, 'data_store.json');
+const ORDERS_FILE = path.join(__dirname, 'orders.json');
 
-// Servir archivos estáticos
-app.use(express.static(__dirname));
+app.use(express.static(path.join(__dirname, 'public')));
 app.use(express.json());
 
-// Leer pedidos almacenados
+// Leer comandas desde archivo JSON
 function getOrdersFromFile() {
     try {
-        if (fs.existsSync(DATA_FILE)) {
-            const data = fs.readFileSync(DATA_FILE, 'utf8');
-            return JSON.parse(data);
+        if (!fs.existsSync(ORDERS_FILE)) {
+            fs.writeFileSync(ORDERS_FILE, JSON.stringify([]));
+            return [];
         }
+        const data = fs.readFileSync(ORDERS_FILE, 'utf8');
+        return JSON.parse(data || '[]');
     } catch (err) {
-        console.error("Error al leer data_store.json:", err);
+        console.error('Error al leer pedidos:', err);
+        return [];
     }
-    return [];
 }
 
-// Guardar pedidos
+// Guardar comandas en archivo JSON
 function saveOrdersToFile(orders) {
     try {
-        fs.writeFileSync(DATA_FILE, JSON.stringify(orders, null, 2));
+        fs.writeFileSync(ORDERS_FILE, JSON.stringify(orders, null, 2));
     } catch (err) {
-        console.error("Error al escribir en data_store.json:", err);
+        console.error('Error al guardar pedidos:', err);
     }
 }
 
-// CONEXIÓN SOCKET.IO EN TIEMPO REAL
+// Conexión Socket.IO en tiempo real
 io.on('connection', (socket) => {
     console.log('⚡ Nuevo cliente conectado:', socket.id);
 
-    // 1. Enviar pedidos actuales al nuevo dispositivo que se conecta
-    const currentOrders = getOrdersFromFile();
-    socket.emit('initial_data', { orders: currentOrders });
+    // Enviar pedidos pendientes
+    socket.emit('initial_data', { orders: getOrdersFromFile() });
 
-    // 2. Escuchar cuando el celular (Mesero) envía una comanda
-    socket.on('new_order', (orderData) => {
-        console.log('📥 Nuevo pedido recibido:', orderData.id);
-        
-        let orders = getOrdersFromFile();
-        orders.unshift(orderData);
+    // Recibir nuevo pedido desde el cliente
+    socket.on('new_order', (newOrder) => {
+        const orders = getOrdersFromFile();
+        orders.unshift(newOrder);
         saveOrdersToFile(orders);
-
-        // Emitir el nuevo pedido a TODOS los dispositivos conectados (incluida la Cocina)
-        io.emit('order_added', orderData);
+        io.emit('order_added', newOrder);
     });
 
-    // 3. Escuchar cuando la cocina marca un pedido como listo
+    // Marcar pedido como completado en cocina
     socket.on('complete_order', (orderId) => {
-        console.log('✅ Pedido completado:', orderId);
-        
         let orders = getOrdersFromFile();
         orders = orders.filter(o => o.id !== orderId);
         saveOrdersToFile(orders);
-
-        // Notificar a todos los dispositivos que la comanda finalizó
         io.emit('order_completed', orderId);
     });
 
     socket.on('disconnect', () => {
-        console.log('🔴 Cliente desconectado:', socket.id);
+        console.log('❌ Cliente desconectado:', socket.id);
     });
 });
 
 server.listen(PORT, () => {
-    console.log(`🚀 Servidor ejecutándose en el puerto ${PORT}`);
+    console.log(`🚀 Servidor corriendo en http://localhost:${PORT}`);
 });
