@@ -1,9 +1,9 @@
 // Reemplaza con la URL real de tu web service en Render
-const socket = io('https://tu-app-en-render.onrender.com');
-const socket = io();
+const socket = io('https://page-exotik-ry.onrender.com');
 
 let menuData = [];
 let cart = [];
+
 
 // Sincronización inicial mediante Socket.IO
 socket.on('initial_data', (data) => {
